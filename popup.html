@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div id="app">
+    <!-- Secret generation view -->
+    <div id="generateSecret" class="view">
+      <h2>Your new secret</h2>
+      <p id="generatedSecret"></p>
+      <button id="proceedToPassword">Proceed</button>
+    </div>
+
+    <!-- Initialization view -->
+    <div id="initialize" class="view">
+      <h2>Set your password</h2>
+      <form id="initializeForm">
+        <label for="password">Password</label>
+        <input type="password" id="password" required>
+        <label for="confirmPassword">Confirm Password</label>
+        <input type="password" id="confirmPassword" required>
+        <button type="submit">Submit</button>
+      </form>
+    </div>
+
+    <!-- Login view -->
+    <div id="login" class="view">
+      <h2>Login to see your secret!</h2>
+      <form id="loginForm">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" required>
+        <button type="submit">Login</button>
+        <button id="resetExtension">Reset</button>
+      </form>
+    </div>
+
+    <!-- Main view -->
+    <div id="main" class="view">
+      <h2>Your secret</h2>
+      <p id="secret"></p>
+      <button id="regenerateSecret">Regenerate Secret</button>
+      <button id="logout">Logout</button>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+
+</html>
