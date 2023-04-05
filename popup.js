@@ -4,6 +4,7 @@ class SecretManager {
     this.secretLength = 16;
   }
 
+  // method to generate a random secret
   generateSecret() {
     let secret = '';
     for (let i = 0; i < this.secretLength; i++) {
@@ -12,6 +13,7 @@ class SecretManager {
     return secret;
   }
 
+  // method to encrypt the secret
   async encrypt(secret, password) {
     const encoder = new TextEncoder();
     const passwordBuffer = encoder.encode(password);
@@ -48,6 +50,7 @@ class SecretManager {
     };
   }
 
+  // method to decrypt the secret
   async decrypt(encryptedData, password) {
     const { salt, iv, encryptedSecret } = encryptedData;
 
@@ -83,6 +86,7 @@ class SecretManager {
     return decoder.decode(decryptedSecretBuffer);
   }
 
+  // method to store the encrypted secret
   async storeSecret(encryptedSecret) {
     return new Promise((resolve, reject) => {
       chrome.runtime.sendMessage({ action: 'storeSecret', encryptedSecret }, (response) => {
@@ -95,6 +99,7 @@ class SecretManager {
     });
   }
 
+  // method to get the encrypted secret
   async getSecret() {
     return new Promise((resolve, reject) => {
       chrome.runtime.sendMessage({ action: 'getSecret' }, (response) => {
@@ -108,6 +113,7 @@ class SecretManager {
   }
 
 
+  // method to set the login state
   async setLoginState(isLoggedIn) {
     return new Promise((resolve, reject) => {
       chrome.storage.local.set({ isLoggedIn }, () => {
@@ -120,6 +126,7 @@ class SecretManager {
     });
   }
 
+  // method to get the login state
   async getLoginState() {
     return new Promise((resolve, reject) => {
       chrome.storage.local.get('isLoggedIn', (result) => {
@@ -132,6 +139,7 @@ class SecretManager {
     });
   }
 
+  // method to show the view based on the view id
   showView(viewId) {
     const views = document.querySelectorAll('.view');
     views.forEach((view) => {
@@ -143,6 +151,7 @@ class SecretManager {
     });
   }
 
+  // method to initialize the secret manager
   async initialize() {
     const storedSecret = await this.getSecret();
     const isLoggedIn = await this.getLoginState();
@@ -165,6 +174,7 @@ class SecretManager {
         }
       }
     } else if (!storedSecret) {
+
       // Show secret generation view
       this.showView('generateSecret');
       const generatedSecret = this.generateSecret();
