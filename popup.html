@@ -28,12 +28,16 @@
 
     <!-- Login view -->
     <div id="login" class="view">
-      <h2>Login to see your secret!</h2>
+      <h2>Log-in to see your secret!</h2>
       <form id="loginForm">
         <label for="loginPassword">Password</label>
         <input type="password" id="loginPassword" required>
-        <button type="submit">Login</button>
-        <button id="resetExtension">Reset</button>
+        <div class="loginBtnContainer">
+          <button type="submit">Login</button>
+        </div>
+        <div class="resetBtnContainer">
+          <button id="resetExtension">Reset</button>
+        </div>
       </form>
     </div>
 

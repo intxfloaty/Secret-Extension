@@ -16,7 +16,7 @@ class SecretManager {
     const encoder = new TextEncoder();
     const passwordBuffer = encoder.encode(password);
     const secretBuffer = encoder.encode(secret);
-  
+
     const passwordKey = await crypto.subtle.importKey(
       'raw',
       passwordBuffer,
@@ -24,7 +24,7 @@ class SecretManager {
       false,
       ['deriveKey']
     );
-  
+
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const key = await crypto.subtle.deriveKey(
       { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
@@ -33,14 +33,14 @@ class SecretManager {
       false,
       ['encrypt']
     );
-  
+
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const encryptedSecret = await crypto.subtle.encrypt(
       { name: 'AES-GCM', iv },
       key,
       secretBuffer
     );
-  
+
     return {
       salt: new Uint8Array(salt).toString(),
       iv: new Uint8Array(iv).toString(),
@@ -53,7 +53,7 @@ class SecretManager {
 
     const decoder = new TextDecoder();
     const passwordBuffer = new TextEncoder().encode(password);
-  
+
     const passwordKey = await crypto.subtle.importKey(
       'raw',
       passwordBuffer,
@@ -61,7 +61,7 @@ class SecretManager {
       false,
       ['deriveKey']
     );
-  
+
     const saltBuffer = new Uint8Array(salt.split(',').map(Number));
     const key = await crypto.subtle.deriveKey(
       { name: 'PBKDF2', salt: saltBuffer, iterations: 100000, hash: 'SHA-256' },
@@ -70,16 +70,16 @@ class SecretManager {
       false,
       ['decrypt']
     );
-  
+
     const ivBuffer = new Uint8Array(iv.split(',').map(Number));
     const encryptedSecretBuffer = new Uint8Array(encryptedSecret.split(',').map(Number));
-  
+
     const decryptedSecretBuffer = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv: ivBuffer },
       key,
       encryptedSecretBuffer
     );
-  
+
     return decoder.decode(decryptedSecretBuffer);
   }
 
@@ -107,6 +107,30 @@ class SecretManager {
     });
   }
 
+  async setLoginState(isLoggedIn) {
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.set({ isLoggedIn }, () => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  async getLoginState() {
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.get('isLoggedIn', (result) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve(result.isLoggedIn);
+        }
+      });
+    });
+  }
+
   showView(viewId) {
     const views = document.querySelectorAll('.view');
     views.forEach((view) => {
@@ -120,8 +144,26 @@ class SecretManager {
 
   async initialize() {
     const storedSecret = await this.getSecret();
+    const isLoggedIn = await this.getLoginState();
 
-    if (!storedSecret) {
+    if (isLoggedIn) {
+      const passwordResponse = await new Promise(resolve => {
+        chrome.runtime.sendMessage({ action: 'getPassword' }, resolve);
+      });
+
+      if (passwordResponse.status === 'success') {
+        const password = passwordResponse.password;
+
+        try {
+          const decryptedSecret = await this.decrypt(storedSecret, password);
+          document.getElementById('secret').textContent = decryptedSecret;
+          this.showView('main');
+        } catch (err) {
+          this.showView('login');
+          alert('Failed to decrypt secret');
+        }
+      }
+    } else if (!storedSecret) {
       // Show secret generation view
       this.showView('generateSecret');
       const generatedSecret = this.generateSecret();
@@ -161,6 +203,8 @@ class SecretManager {
           const decryptedSecret = await this.decrypt(storedSecretAfterRegenerate, password);
           document.getElementById('secret').textContent = decryptedSecret;
           this.showView('main');
+          await this.setLoginState(true);
+          chrome.runtime.sendMessage({ action: 'storePassword', password });
         } catch (err) {
           alert('Incorrect password');
         }
@@ -184,16 +228,32 @@ class SecretManager {
     }
 
     document.getElementById('regenerateSecret').addEventListener('click', async () => {
-      const newSecret = this.generateSecret();
-      const newPassword = document.getElementById('loginPassword').value;
-      const newEncryptedSecret = await this.encrypt(newSecret, newPassword);
-      await this.storeSecret(newEncryptedSecret);
-      document.getElementById('secret').textContent = newSecret;
+      const passwordResponse = await new Promise(resolve => {
+        chrome.runtime.sendMessage({ action: 'getPassword' }, resolve);
+      });
+
+      if (passwordResponse.status === 'success') {
+        const newPassword = passwordResponse.password;
+
+        const newSecret = secretManager.generateSecret();
+        const newEncryptedSecret = await secretManager.encrypt(newSecret, newPassword);
+        await secretManager.storeSecret(newEncryptedSecret);
+        document.getElementById('secret').textContent = newSecret;
+      } else {
+        alert('Failed to retrieve stored password');
+      }
     });
 
-    document.getElementById('logout').addEventListener('click', () => {
+
+    document.getElementById('logout').addEventListener('click', async () => {
+      await this.setLoginState(false);
+      chrome.runtime.sendMessage({ action: 'logout' });
       this.showView('login');
+
+      // reload the extension popup
+      location.reload()
     });
+
   }
 }
 
