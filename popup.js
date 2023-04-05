@@ -85,11 +85,11 @@ class SecretManager {
 
   async storeSecret(encryptedSecret) {
     return new Promise((resolve, reject) => {
-      chrome.storage.local.set({ encryptedSecret }, () => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else {
+      chrome.runtime.sendMessage({ action: 'storeSecret', encryptedSecret }, (response) => {
+        if (response.status === 'success') {
           resolve();
+        } else {
+          reject(response.error);
         }
       });
     });
@@ -97,15 +97,16 @@ class SecretManager {
 
   async getSecret() {
     return new Promise((resolve, reject) => {
-      chrome.storage.local.get('encryptedSecret', (result) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
+      chrome.runtime.sendMessage({ action: 'getSecret' }, (response) => {
+        if (response.status === 'success') {
+          resolve(response.encryptedSecret);
         } else {
-          resolve(result.encryptedSecret);
+          reject(response.error);
         }
       });
     });
   }
+
 
   async setLoginState(isLoggedIn) {
     return new Promise((resolve, reject) => {
